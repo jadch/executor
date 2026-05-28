@@ -201,17 +201,25 @@ export interface ServerInstance {
 type ServerHandlers = Awaited<ReturnType<typeof getServerHandlers>>;
 
 const corsHeaders = {
-  "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "access-control-allow-headers":
-    "authorization, content-type, x-executor-token, x-requested-with, traceparent, tracestate, baggage",
+    "authorization, content-type, x-executor-token, x-requested-with, traceparent, tracestate, baggage, b3",
+  "access-control-allow-credentials": "true",
   "access-control-expose-headers": "*",
 } as const;
 
 const withCorsHeaders = (req: Request, response: Response): Response => {
-  if (!req.headers.has("origin")) return response;
+  const origin = req.headers.get("origin");
+  if (!origin) return response;
   const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
   for (const [key, value] of Object.entries(corsHeaders)) headers.set(key, value);
+  headers.set(
+    "access-control-allow-headers",
+    req.headers.get("access-control-request-headers") ??
+      corsHeaders["access-control-allow-headers"],
+  );
+  headers.append("vary", "Origin");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

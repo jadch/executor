@@ -141,13 +141,15 @@ describe("startServer network bind auth", () => {
       headers: {
         origin: "http://127.0.0.1:4789",
         "access-control-request-method": "GET",
-        "access-control-request-headers": "authorization,content-type,traceparent",
+        "access-control-request-headers": "authorization,b3,traceparent",
       },
     });
 
     expect(response.status).toBe(204);
-    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:4789");
+    expect(response.headers.get("access-control-allow-credentials")).toBe("true");
     expect(response.headers.get("access-control-allow-headers")).toContain("traceparent");
+    expect(response.headers.get("access-control-allow-headers")).toContain("b3");
   });
 
   it("adds CORS headers to authenticated API failures", async () => {
@@ -174,7 +176,8 @@ describe("startServer network bind auth", () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:4789");
+    expect(response.headers.get("access-control-allow-credentials")).toBe("true");
     expect(response.headers.get("access-control-allow-headers")).toContain("traceparent");
   });
 
