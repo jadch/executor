@@ -3,4 +3,95 @@ title: API Keys
 description: Authenticate to Executor Cloud.
 ---
 
-This page will document cloud API key creation, rotation, and usage once the public flow is finalized.
+Executor Cloud API keys let non-browser clients connect to the same hosted Executor Server that the
+Cloud app uses. Use them for CLI automation, MCP clients, and scripts that need the typed Executor
+API.
+
+API keys are bearer credentials. Treat them like passwords: store them in your shell secret manager
+or CI secret store, and revoke any key that may have been exposed.
+
+## Create an API key
+
+1. Sign in to Executor Cloud.
+2. Open **Cloud console → API keys**.
+3. Create a key and copy the value immediately. The full value is only shown once.
+
+The examples below use `https://executor.sh` as the hosted server origin. If your organization uses
+a different hosted origin, replace it everywhere.
+
+## Connect the CLI
+
+Export the key, then add the hosted server as a named Executor server profile:
+
+```bash
+export EXECUTOR_API_KEY="exk_..."
+executor server add cloud https://executor.sh --kind cloud --display-name "Executor Cloud" --default
+```
+
+The CLI stores the server profile, not the API key. Keep `EXECUTOR_API_KEY` in your shell, CI, or
+secret manager.
+
+Verify the profile and list sources through the hosted server:
+
+```bash
+executor server list
+executor tools sources --server cloud
+```
+
+After a default profile is configured, commands that accept `--server` can omit it:
+
+```bash
+executor tools search "calendar"
+executor call google_calendar calendar.events.list '{"calendarId":"primary"}'
+```
+
+## Connect MCP clients
+
+Executor Cloud exposes the remote MCP endpoint at:
+
+```text
+https://executor.sh/mcp
+```
+
+For clients that support `add-mcp`, install the remote server with the bearer header:
+
+```bash
+npx add-mcp https://executor.sh/mcp \
+  --transport http \
+  --name executor \
+  --header "Authorization: Bearer ${EXECUTOR_API_KEY}"
+```
+
+For clients that use JSON configuration, use the same URL and header:
+
+```json
+{
+  "mcpServers": {
+    "executor": {
+      "url": "https://executor.sh/mcp",
+      "headers": {
+        "Authorization": "Bearer exk_..."
+      }
+    }
+  }
+}
+```
+
+To have tool approvals resume in the browser, add `elicitation_mode=browser` to the MCP URL:
+
+```text
+https://executor.sh/mcp?elicitation_mode=browser
+```
+
+## Rotate or revoke
+
+Create a replacement key, update every client that uses the old value, then revoke the old key from
+**Cloud console → API keys**. CLI profiles do not need to change when only the key value changes.
+
+## Troubleshooting
+
+- `401 Unauthorized`: confirm the `Authorization: Bearer ...` header is present and the key has not
+  been revoked.
+- `403 Forbidden`: confirm the key belongs to a user with access to the active organization.
+- The CLI starts a local daemon unexpectedly: use `--kind cloud` when adding HTTPS hosted profiles
+  and pass `--server cloud` to the command you are testing.

@@ -10,6 +10,7 @@ import { Button } from "@executor-js/react/components/button";
 import { SourceFavicon, sourcePresetIconUrl } from "@executor-js/react/components/source-favicon";
 import { CommandPalette } from "@executor-js/react/components/command-palette";
 import { useClientPlugins, useSourcePlugins } from "@executor-js/sdk/client";
+import { ServerConnectionMenu } from "./server-connection-menu";
 
 // ── Env ─────────────────────────────────────────────────────────────────
 
@@ -399,6 +400,9 @@ function SidebarContent(props: {
 
       {/* Footer */}
       <div className="shrink-0 border-t border-sidebar-border px-4 py-2.5">
+        <div className="mb-2">
+          <ServerConnectionMenu />
+        </div>
         <div className="flex flex-col gap-1.5 text-xs leading-none">
           <a
             href={`${VITE_GITHUB_URL}/issues`}

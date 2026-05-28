@@ -27,6 +27,7 @@
     "@executor-js/integrations-registry": "workspace:*",
     "@executor-js/local": "workspace:*",
     "@executor-js/runtime-quickjs": "workspace:*",
+    "@executor-js/sdk": "workspace:*",
     "@jitl/quickjs-wasmfile-release-sync": "catalog:",
     "effect": "catalog:",
     "quickjs-emscripten": "catalog:"

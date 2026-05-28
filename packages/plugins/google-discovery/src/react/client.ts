@@ -1,7 +1,11 @@
 import { createPluginAtomClient } from "@executor-js/sdk/client";
-import { getBaseUrl } from "@executor-js/react/api/base-url";
+import {
+  getExecutorApiBaseUrl,
+  getExecutorServerAuthorizationHeader,
+} from "@executor-js/react/api/server-connection";
 import { GoogleDiscoveryGroup } from "../api/group";
 
 export const GoogleDiscoveryClient = createPluginAtomClient(GoogleDiscoveryGroup, {
-  baseUrl: getBaseUrl,
+  baseUrl: getExecutorApiBaseUrl,
+  authorizationHeader: getExecutorServerAuthorizationHeader,
 });
