@@ -55,6 +55,14 @@ const serverLabel = (connection: ExecutorServerConnection): string =>
 const serverDescription = (connection: ExecutorServerConnection): string =>
   connection.origin.replace(/^https?:\/\//, "");
 
+const serverKindLabel = (connection: ExecutorServerConnection): string => {
+  if (connection.kind === "desktop-sidecar") return "Desktop";
+  const hostname = new URL(connection.origin).hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+    ? "Local"
+    : "Remote";
+};
+
 const authLabel = (connection: ExecutorServerConnection): string => {
   const authorization = getExecutorServerAuthorizationHeader(connection);
   if (!authorization) return "No auth";
@@ -96,6 +104,7 @@ export function ServerConnectionMenu() {
   }));
   const [draft, setDraft] = useState<DraftProfile>(emptyDraft);
   const [error, setError] = useState<string | null>(null);
+  const [showCustomServer, setShowCustomServer] = useState(false);
 
   const persistSnapshot = useCallback((next: ExecutorServerProfilesSnapshot) => {
     setSnapshot(next);
@@ -168,6 +177,7 @@ export function ServerConnectionMenu() {
 
     setError(null);
     setDraft(emptyDraft);
+    setShowCustomServer(false);
     persistSnapshot(next);
     setServerConnection(active);
   };
@@ -226,7 +236,7 @@ export function ServerConnectionMenu() {
                   </span>
                 </Button>
                 <span className="rounded border border-border/70 px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-                  {profile.kind}
+                  {serverKindLabel(profile)}
                 </span>
                 <Button
                   type="button"
@@ -242,67 +252,84 @@ export function ServerConnectionMenu() {
           })}
         </div>
 
-        <form onSubmit={addProfile} className="border-t border-border p-3">
-          <div className="grid gap-2">
-            <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
-              Origin
-              <Input
-                value={draft.origin}
-                onChange={(event) => setDraft({ ...draft, origin: event.target.value })}
-                placeholder="http://127.0.0.1:4788"
-                className="h-8 text-sm"
-              />
-            </Label>
-            <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
-              Name
-              <Input
-                value={draft.displayName}
-                onChange={(event) => setDraft({ ...draft, displayName: event.target.value })}
-                placeholder="Local daemon"
-                className="h-8 text-sm"
-              />
-            </Label>
-            <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
-              Auth
-              <NativeSelect
-                size="sm"
-                value={draft.authMode}
-                onChange={(event) =>
-                  setDraft({ ...draft, authMode: event.target.value as AuthMode })
-                }
-              >
-                <NativeSelectOption value="none">None</NativeSelectOption>
-                <NativeSelectOption value="bearer">Bearer token</NativeSelectOption>
-                <NativeSelectOption value="basic">Basic password</NativeSelectOption>
-              </NativeSelect>
-            </Label>
-            {draft.authMode === "basic" && (
-              <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
-                Username
-                <Input
-                  value={draft.username}
-                  onChange={(event) => setDraft({ ...draft, username: event.target.value })}
-                  className="h-8 text-sm"
-                />
-              </Label>
-            )}
-            {draft.authMode !== "none" && (
-              <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
-                {draft.authMode === "bearer" ? "Token" : "Password"}
-                <Input
-                  type="password"
-                  value={draft.secret}
-                  onChange={(event) => setDraft({ ...draft, secret: event.target.value })}
-                  className="h-8 text-sm"
-                />
-              </Label>
-            )}
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <Button type="submit" size="sm" className="w-full">
-              Add and use
-            </Button>
-          </div>
-        </form>
+        <div className="border-t border-border p-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start px-2"
+            onClick={() => {
+              setError(null);
+              setShowCustomServer((value) => !value);
+            }}
+          >
+            {showCustomServer ? "Hide custom server" : "Custom server"}
+          </Button>
+
+          {showCustomServer && (
+            <form onSubmit={addProfile} className="mt-3">
+              <div className="grid gap-2">
+                <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                  Origin
+                  <Input
+                    value={draft.origin}
+                    onChange={(event) => setDraft({ ...draft, origin: event.target.value })}
+                    placeholder="https://executor.example"
+                    className="h-8 text-sm"
+                  />
+                </Label>
+                <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                  Name
+                  <Input
+                    value={draft.displayName}
+                    onChange={(event) => setDraft({ ...draft, displayName: event.target.value })}
+                    placeholder="Remote executor"
+                    className="h-8 text-sm"
+                  />
+                </Label>
+                <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                  Auth
+                  <NativeSelect
+                    size="sm"
+                    value={draft.authMode}
+                    onChange={(event) =>
+                      setDraft({ ...draft, authMode: event.target.value as AuthMode })
+                    }
+                  >
+                    <NativeSelectOption value="none">None</NativeSelectOption>
+                    <NativeSelectOption value="bearer">Bearer token</NativeSelectOption>
+                    <NativeSelectOption value="basic">Basic password</NativeSelectOption>
+                  </NativeSelect>
+                </Label>
+                {draft.authMode === "basic" && (
+                  <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                    Username
+                    <Input
+                      value={draft.username}
+                      onChange={(event) => setDraft({ ...draft, username: event.target.value })}
+                      className="h-8 text-sm"
+                    />
+                  </Label>
+                )}
+                {draft.authMode !== "none" && (
+                  <Label className="grid gap-1 text-xs font-medium text-muted-foreground">
+                    {draft.authMode === "bearer" ? "Token" : "Password"}
+                    <Input
+                      type="password"
+                      value={draft.secret}
+                      onChange={(event) => setDraft({ ...draft, secret: event.target.value })}
+                      className="h-8 text-sm"
+                    />
+                  </Label>
+                )}
+                {error && <p className="text-xs text-destructive">{error}</p>}
+                <Button type="submit" size="sm" className="w-full">
+                  Add and use
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );
