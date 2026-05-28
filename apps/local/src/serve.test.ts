@@ -116,4 +116,75 @@ describe("startServer network bind auth", () => {
     expect(authorized.status).toBe(200);
     expect(await authorized.text()).toBe("ok");
   });
+
+  it("answers browser CORS preflights before auth", async () => {
+    server = await startServer({
+      port: 0,
+      hostname: "127.0.0.1",
+      clientDir,
+      authToken: "test-token",
+      handlers: {
+        api: {
+          handler: async () => new Response("ok"),
+          dispose: async () => {},
+        },
+        mcp: {
+          handleRequest: async () => new Response("ok"),
+          handleApprovalRequest: async () => new Response("ok"),
+          close: async () => {},
+        },
+      },
+    });
+
+    const response = await fetch(`http://127.0.0.1:${server.port}/api/scope`, {
+      method: "OPTIONS",
+      headers: {
+        origin: "http://127.0.0.1:4789",
+        "access-control-request-method": "GET",
+        "access-control-request-headers": "authorization,content-type,traceparent",
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-headers")).toContain("traceparent");
+  });
+
+  it("adds CORS headers to authenticated API failures", async () => {
+    server = await startServer({
+      port: 0,
+      hostname: "127.0.0.1",
+      clientDir,
+      authToken: "test-token",
+      handlers: {
+        api: {
+          handler: async () => new Response("ok"),
+          dispose: async () => {},
+        },
+        mcp: {
+          handleRequest: async () => new Response("ok"),
+          handleApprovalRequest: async () => new Response("ok"),
+          close: async () => {},
+        },
+      },
+    });
+
+    const response = await fetch(`http://127.0.0.1:${server.port}/api/scope`, {
+      headers: { origin: "http://127.0.0.1:4789" },
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-headers")).toContain("traceparent");
+  });
+
+  it("does not expose unauthenticated loopback servers cross-origin", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/scope`, {
+      headers: { origin: "https://example.com" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
 });
